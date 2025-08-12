@@ -18,15 +18,14 @@ class ExternalAPIService:
             profile_config = await profile_service.get_active_profile_config()
             
             if profile_config:
+                # Use the exact headers and cookies from your working fetch request
                 return {
                     "url": "https://itbd.online/api/sms/getnum",
                     "headers": {
                         "accept": "*/*",
-                        "accept-language": "en-US,en;q=0.9",
+                        "accept-language": "en-US,en;q=0.5",
                         "content-type": "application/json",
-                        "origin": "https://itbd.online",
                         "priority": "u=1, i",
-                        "referer": "https://itbd.online/user_report_1",
                         "sec-ch-ua": '"Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
                         "sec-ch-ua-mobile": "?0",
                         "sec-ch-ua-platform": '"Windows"',
@@ -34,16 +33,19 @@ class ExternalAPIService:
                         "sec-fetch-mode": "cors",
                         "sec-fetch-site": "same-origin",
                         "sessionauth": "null",
-                        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
-                        "x-requested-with": "XMLHttpRequest"
+                        "x-requested-with": "XMLHttpRequest",
+                        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
                     },
                     "cookies": {
-                        "_ga": "GA1.1.290468168.1753911312",
-                        "_ga_9MJB2R4JD4": "GS2.1.s1754563840$o6$g0$t1754563941$j60$l0$h0",
+                        "_ga": "GA1.1.1292367769.1753396403",
+                        "sessionAuth": profile_config["session_token"],  # Use the session token from login response
+                        "_ga_9MJB2R4JD4": "GS2.1.s1755023001$o165$g1$t1755032375$j58$l0$h0",
+                        "popupShown1xp0": "true",
                         "TawkConnectionTime": "0",
-                        "twk_uuid_681787a55d55ef191a9da720": "%7B%22uuid%22%3A%221.70ieXQVh4lUvtU0xKYLUgsDABulwZhw3ztAUWycySPjriKZuE0iWvi3VihlonIbI1PyZEo1wgeOIN8VzLHmHGsWb6Hbas35gAsLzJtc9sLJhnC2CCF0W%22%2C%22version%22%3A3%2C%22domain%22%3A%22itbd.online%22%2C%22ts%22%3A1755028641783%7D"
+                        "twk_uuid_681787a55d55ef191a9da720": "%7B%22uuid%22%3A%221.70idSn3nmozSQySpwWZsUBKHN9HIngJkFJUlhqcEbMykn4uA5YhFGIFUxYVqfI4pWLuL2MONdB0MJbUMr4gXWsdKMtD4klrsZWhsGcSG0CmXdpS7bY9g%22%2C%22version%22%3A3%2C%22domain%22%3A%22itbd.online%22%2C%22ts%22%3A1755034699570%7D"
                     },
-                    "auth_token": profile_config["auth_token"]
+                    "auth_token": profile_config["auth_token"],
+                    "session_token": profile_config["session_token"]
                 }
         
         # Fallback to default configuration (no auth token)
@@ -71,14 +73,14 @@ class ExternalAPIService:
             "removePlus": False
         }
         
-        # Add auth token if available from active profile
-        if "auth_token" in config:
-            data["authToken"] = config["auth_token"]
+        # DO NOT add authToken to JSON body - it should be in cookies as sessionAuth
         
         # Update referer with the number range
         headers = config["headers"].copy()
         if number_range:
             headers["referer"] = f"https://itbd.online/user_report_1?getfrange={number_range}"
+        else:
+            headers["referer"] = "https://itbd.online/user_report_1"
         
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(

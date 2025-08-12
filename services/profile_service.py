@@ -138,6 +138,9 @@ class ProfileService:
                             profile.username = data_section.get("username")
                             profile.email = data_section.get("email")
                             
+                            # Store the session token from the response (this is what we use for API calls)
+                            profile.session_token = data_section.get("authToken", profile.auth_token)
+                            
                             # Parse session expires if available
                             session_expires_str = data_section.get("sessionExpires")
                             if session_expires_str:
@@ -234,7 +237,8 @@ class ProfileService:
         
         # Return the configuration that can be used for external API calls
         return {
-            "auth_token": active_profile.auth_token,
+            "auth_token": active_profile.auth_token,  # Original token for login
+            "session_token": active_profile.session_token or active_profile.auth_token,  # Session token for API calls
             "username": active_profile.username,
             "email": active_profile.email,
             "session_expires": active_profile.session_expires,

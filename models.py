@@ -50,7 +50,8 @@ class APIProfile(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    auth_token = Column(String(500), nullable=False)  # Long token string
+    auth_token = Column(String(500), nullable=False)  # Long token string for login
+    session_token = Column(String(500), nullable=True)  # Session token from login response
     username = Column(String(100), nullable=True)
     email = Column(String(200), nullable=True)
     session_expires = Column(DateTime(timezone=True), nullable=True)

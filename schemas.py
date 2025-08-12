@@ -75,6 +75,7 @@ class APIProfile(BaseModel):
     id: int
     name: str
     auth_token: str
+    session_token: Optional[str] = None
     username: Optional[str] = None
     email: Optional[str] = None
     session_expires: Optional[datetime] = None
