@@ -1,6 +1,7 @@
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 import time
+import os
 from datetime import datetime
 from collections import defaultdict
 from typing import Dict
@@ -10,7 +11,14 @@ import asyncio
 rate_limit_storage: Dict[str, list] = defaultdict(list)
 
 async def rate_limit_middleware(request: Request, call_next):
-    """Rate limiting middleware"""
+    """Rate limiting middleware - disabled for local development"""
+    # Skip rate limiting for local development
+    environment = os.getenv("ENVIRONMENT", "development")
+    if environment == "development":
+        response = await call_next(request)
+        return response
+    
+    # Rate limiting for production only
     client_ip = request.client.host
     current_time = time.time()
     
@@ -35,16 +43,23 @@ async def rate_limit_middleware(request: Request, call_next):
     return response
 
 async def logging_middleware(request: Request, call_next):
-    """Request logging middleware"""
+    """Request logging middleware - simplified for local development"""
     start_time = time.time()
     
     response = await call_next(request)
     
     process_time = int((time.time() - start_time) * 1000)
     
-    # Log request (in production, use proper logging)
-    print(f"{datetime.utcnow().isoformat()} - "
-          f"{request.method} {request.url.path} - "
-          f"{response.status_code} - {process_time}ms")
+    # Only log in development if needed, skip for production noise
+    environment = os.getenv("ENVIRONMENT", "development")
+    if environment == "development":
+        # Minimal logging for development
+        if process_time > 1000:  # Only log slow requests
+            print(f"{request.method} {request.url.path} - {response.status_code} - {process_time}ms")
+    else:
+        # Full logging for production
+        print(f"{datetime.utcnow().isoformat()} - "
+              f"{request.method} {request.url.path} - "
+              f"{response.status_code} - {process_time}ms")
     
     return response

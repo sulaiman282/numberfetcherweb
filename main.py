@@ -6,6 +6,7 @@ import os
 from database import init_db
 from routers import public, admin
 from middleware import rate_limit_middleware, logging_middleware
+from config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,17 +23,30 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Configure based on environment
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS middleware - more permissive for local development
+if settings.environment == "development":
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    # More restrictive CORS for production
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000", "https://your-frontend-domain.com"],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["*"],
+    )
 
-# Custom middleware
-app.middleware("http")(rate_limit_middleware)
+# Custom middleware - only add rate limiting in production
+if settings.environment == "production":
+    app.middleware("http")(rate_limit_middleware)
+
+# Always add logging middleware (but it's simplified for development)
 app.middleware("http")(logging_middleware)
 
 # Include routers
