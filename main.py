@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 import os
 from database import init_db
 from routers import public, admin
-from middleware import rate_limit_middleware, logging_middleware
+from middleware import logging_middleware
 from config import settings
 
 @asynccontextmanager
@@ -41,10 +41,6 @@ else:
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["*"],
     )
-
-# Custom middleware - only add rate limiting in production
-if settings.environment == "production":
-    app.middleware("http")(rate_limit_middleware)
 
 # Always add logging middleware (but it's simplified for development)
 app.middleware("http")(logging_middleware)
