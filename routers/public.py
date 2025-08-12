@@ -77,9 +77,26 @@ async def fetch_number(
         external_service = ExternalAPIService(db)
         response = await external_service.fetch_number()
         
+        # Convert 429 (rate limit) to 503 (service unavailable) to avoid rate limit issues
+        status_code = response.status_code
+        if status_code == 429:
+            status_code = 503
+            # Optionally modify the response content
+            try:
+                content = json.loads(response.content)
+                if isinstance(content, dict) and "error" in content:
+                    content["error"] = "External service temporarily unavailable"
+                    response_content = json.dumps(content).encode()
+                else:
+                    response_content = response.content
+            except:
+                response_content = b'{"error": "External service temporarily unavailable"}'
+        else:
+            response_content = response.content
+        
         return Response(
-            content=response.content,
-            status_code=response.status_code,
+            content=response_content,
+            status_code=status_code,
             media_type=response.headers.get("content-type", "application/json")
         )
         
@@ -130,9 +147,26 @@ async def fetch_number_with_range(
         external_service = ExternalAPIService(db)
         response = await external_service.fetch_number(number_range)
         
+        # Convert 429 (rate limit) to 503 (service unavailable) to avoid rate limit issues
+        status_code = response.status_code
+        if status_code == 429:
+            status_code = 503
+            # Optionally modify the response content
+            try:
+                content = json.loads(response.content)
+                if isinstance(content, dict) and "error" in content:
+                    content["error"] = "External service temporarily unavailable"
+                    response_content = json.dumps(content).encode()
+                else:
+                    response_content = response.content
+            except:
+                response_content = b'{"error": "External service temporarily unavailable"}'
+        else:
+            response_content = response.content
+        
         return Response(
-            content=response.content,
-            status_code=response.status_code,
+            content=response_content,
+            status_code=status_code,
             media_type=response.headers.get("content-type", "application/json")
         )
         

@@ -14,9 +14,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 1440  # 24 hours
     
-    # Rate limiting
-    rate_limit_requests: int = 100
-    rate_limit_window: int = 3600  # 1 hour
+
     
     class Config:
         env_file = ".env"
