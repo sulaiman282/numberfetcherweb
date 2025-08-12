@@ -220,28 +220,33 @@ async def get_profiles(
     profiles = await profile_service.get_all_profiles()
     return profiles
 
-@router.post("/profiles", response_model=APIProfileSchema)
+@router.post("/profiles")
 async def create_profile(
     profile_data: APIProfileCreate,
     current_user: AdminUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Create new API profile"""
+    """Create new API profile with auto-login"""
     profile_service = ProfileService(db)
-    profile = await profile_service.create_profile(
+    profile, login_result = await profile_service.create_profile(
         name=profile_data.name,
         auth_token=profile_data.auth_token
     )
-    return profile
+    
+    return {
+        "profile": profile,
+        "login_result": login_result,
+        "message": "Profile created and login attempted"
+    }
 
-@router.put("/profiles/{profile_id}", response_model=APIProfileSchema)
+@router.put("/profiles/{profile_id}")
 async def update_profile(
     profile_id: int,
     profile_data: APIProfileUpdate,
     current_user: AdminUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Update API profile"""
+    """Update API profile with auto-login"""
     result = await db.execute(
         select(APIProfile).where(APIProfile.id == profile_id)
     )
@@ -251,13 +256,27 @@ async def update_profile(
         raise HTTPException(status_code=404, detail="Profile not found")
     
     update_data = profile_data.dict(exclude_unset=True)
+    auth_token_changed = False
+    
     for field, value in update_data.items():
+        if field == "auth_token" and getattr(profile, field) != value:
+            auth_token_changed = True
         setattr(profile, field, value)
     
     await db.commit()
     await db.refresh(profile)
     
-    return profile
+    # Auto-login if auth token was changed
+    login_result = None
+    if auth_token_changed:
+        profile_service = ProfileService(db)
+        login_result = await profile_service.login_profile(profile_id)
+    
+    return {
+        "profile": profile,
+        "login_result": login_result,
+        "message": "Profile updated" + (" and login attempted" if auth_token_changed else "")
+    }
 
 @router.delete("/profiles/{profile_id}")
 async def delete_profile(

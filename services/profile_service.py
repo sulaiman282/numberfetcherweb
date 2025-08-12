@@ -13,8 +13,8 @@ class ProfileService:
         self.login_url = "https://itbd.online/api/login"
         self.timeout = 10
     
-    async def create_profile(self, name: str, auth_token: str) -> APIProfile:
-        """Create a new API profile"""
+    async def create_profile(self, name: str, auth_token: str) -> tuple[APIProfile, dict]:
+        """Create a new API profile and auto-login"""
         # Deactivate all other profiles first
         await self.deactivate_all_profiles()
         
@@ -30,7 +30,10 @@ class ProfileService:
         await self.db.commit()
         await self.db.refresh(profile)
         
-        return profile
+        # Auto-login the new profile
+        login_result = await self.login_profile(profile.id)
+        
+        return profile, login_result
     
     async def get_all_profiles(self) -> list[APIProfile]:
         """Get all API profiles"""
@@ -240,7 +243,16 @@ class ProfileService:
                 "accept-language": "en-US,en;q=0.9",
                 "content-type": "application/json",
                 "origin": "https://itbd.online",
-                "referer": "https://itbd.online/",
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                "priority": "u=1, i",
+                "referer": "https://itbd.online/user_report_1",
+                "sec-ch-ua": '"Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": '"Windows"',
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "sessionauth": "null",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+                "x-requested-with": "XMLHttpRequest"
             }
         }
