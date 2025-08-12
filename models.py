@@ -44,3 +44,19 @@ class APILog(Base):
     response_status = Column(Integer, nullable=True)
     response_time_ms = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+class APIProfile(Base):
+    __tablename__ = "api_profiles"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    auth_token = Column(String(500), nullable=False)  # Long token string
+    username = Column(String(100), nullable=True)
+    email = Column(String(200), nullable=True)
+    session_expires = Column(DateTime(timezone=True), nullable=True)
+    is_active = Column(Boolean, default=False)
+    is_logged_in = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    last_login_attempt = Column(DateTime(timezone=True), nullable=True)
+    login_status = Column(String(50), default="not_attempted")  # not_attempted, success, failed

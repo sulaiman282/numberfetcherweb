@@ -4,15 +4,18 @@ from sqlalchemy import select, delete
 from typing import List
 from datetime import timedelta
 from database import get_db
-from models import AdminUser, NumberRange, Configuration
+from models import AdminUser, NumberRange, Configuration, APIProfile
 from schemas import (
     AdminLogin, Token, NumberRange as NumberRangeSchema,
-    NumberRangeCreate, NumberRangeUpdate, DashboardResponse
+    NumberRangeCreate, NumberRangeUpdate, DashboardResponse,
+    APIProfile as APIProfileSchema, APIProfileCreate, APIProfileUpdate,
+    ProfileLoginResponse
 )
 from auth import authenticate_user, create_access_token, get_current_user
 from services.external_api import ExternalAPIService
 from services.range_service import RangeService
 from services.timer_service import TimerService
+from services.profile_service import ProfileService
 
 router = APIRouter()
 
@@ -44,16 +47,9 @@ async def get_dashboard(
 ):
     """Get dashboard data"""
     try:
-        # Get current configuration
-        config_result = await db.execute(
-            select(Configuration).where(Configuration.key == "current_config")
-        )
-        config_row = config_result.scalar_one_or_none()
-        config = config_row.value if config_row else {}
-        
-        # Get balance information
-        external_service = ExternalAPIService()
-        balance_data = await external_service.get_balance(config)
+        # Get balance information using active profile
+        external_service = ExternalAPIService(db)
+        balance_data = await external_service.get_balance()
         
         # Get number ranges
         range_service = RangeService(db)
@@ -166,15 +162,8 @@ async def get_balance(
 ):
     """Get balance information"""
     try:
-        # Get current configuration
-        config_result = await db.execute(
-            select(Configuration).where(Configuration.key == "current_config")
-        )
-        config_row = config_result.scalar_one_or_none()
-        config = config_row.value if config_row else {}
-        
-        external_service = ExternalAPIService()
-        balance_data = await external_service.get_balance(config)
+        external_service = ExternalAPIService(db)
+        balance_data = await external_service.get_balance()
         
         return balance_data
         
@@ -188,15 +177,8 @@ async def get_test_numbers(
 ):
     """Get latest test numbers"""
     try:
-        # Get current configuration
-        config_result = await db.execute(
-            select(Configuration).where(Configuration.key == "current_config")
-        )
-        config_row = config_result.scalar_one_or_none()
-        config = config_row.value if config_row else {}
-        
-        external_service = ExternalAPIService()
-        test_data = await external_service.get_access_list(config)
+        external_service = ExternalAPIService(db)
+        test_data = await external_service.get_access_list()
         
         return test_data
         
@@ -225,3 +207,109 @@ async def stop_timer(
     timer_service = TimerService(db)
     result = await timer_service.stop_timer(category)
     return result
+
+# Profile Management Endpoints
+
+@router.get("/profiles", response_model=List[APIProfileSchema])
+async def get_profiles(
+    current_user: AdminUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all API profiles"""
+    profile_service = ProfileService(db)
+    profiles = await profile_service.get_all_profiles()
+    return profiles
+
+@router.post("/profiles", response_model=APIProfileSchema)
+async def create_profile(
+    profile_data: APIProfileCreate,
+    current_user: AdminUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create new API profile"""
+    profile_service = ProfileService(db)
+    profile = await profile_service.create_profile(
+        name=profile_data.name,
+        auth_token=profile_data.auth_token
+    )
+    return profile
+
+@router.put("/profiles/{profile_id}", response_model=APIProfileSchema)
+async def update_profile(
+    profile_id: int,
+    profile_data: APIProfileUpdate,
+    current_user: AdminUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update API profile"""
+    result = await db.execute(
+        select(APIProfile).where(APIProfile.id == profile_id)
+    )
+    profile = result.scalar_one_or_none()
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    update_data = profile_data.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(profile, field, value)
+    
+    await db.commit()
+    await db.refresh(profile)
+    
+    return profile
+
+@router.delete("/profiles/{profile_id}")
+async def delete_profile(
+    profile_id: int,
+    current_user: AdminUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete API profile"""
+    profile_service = ProfileService(db)
+    success = await profile_service.delete_profile(profile_id)
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    return {"message": "Profile deleted successfully"}
+
+@router.post("/profiles/{profile_id}/activate")
+async def activate_profile(
+    profile_id: int,
+    current_user: AdminUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Activate a specific profile"""
+    profile_service = ProfileService(db)
+    success = await profile_service.activate_profile(profile_id)
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    return {"message": "Profile activated successfully"}
+
+@router.post("/profiles/{profile_id}/login", response_model=ProfileLoginResponse)
+async def login_profile(
+    profile_id: int,
+    current_user: AdminUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Attempt to login with a profile's auth token"""
+    profile_service = ProfileService(db)
+    result = await profile_service.login_profile(profile_id)
+    return result
+
+@router.get("/profiles/active", response_model=APIProfileSchema)
+async def get_active_profile(
+    current_user: AdminUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get the currently active profile"""
+    profile_service = ProfileService(db)
+    profile = await profile_service.get_active_profile()
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="No active profile found")
+    
+    return profile

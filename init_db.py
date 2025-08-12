@@ -11,7 +11,7 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from database import init_db, AsyncSessionLocal
-from models import AdminUser, NumberRange, Configuration
+from models import AdminUser, NumberRange, Configuration, APIProfile
 from auth import get_password_hash
 from config import settings
 

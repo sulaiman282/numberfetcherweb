@@ -61,3 +61,34 @@ class HealthResponse(BaseModel):
     status: str
     timestamp: datetime
     database: str
+
+# Profile schemas
+class APIProfileCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    auth_token: str = Field(..., min_length=10, max_length=500)
+
+class APIProfileUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    auth_token: Optional[str] = Field(None, min_length=10, max_length=500)
+
+class APIProfile(BaseModel):
+    id: int
+    name: str
+    auth_token: str
+    username: Optional[str] = None
+    email: Optional[str] = None
+    session_expires: Optional[datetime] = None
+    is_active: bool
+    is_logged_in: bool
+    created_at: datetime
+    updated_at: datetime
+    last_login_attempt: Optional[datetime] = None
+    login_status: str
+    
+    class Config:
+        from_attributes = True
+
+class ProfileLoginResponse(BaseModel):
+    success: bool
+    message: str
+    profile_data: Optional[Dict[str, Any]] = None

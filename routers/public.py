@@ -74,8 +74,8 @@ async def fetch_number(
             return {"error": "Server is paused"}
         
         # Make external API call
-        external_service = ExternalAPIService()
-        response = await external_service.fetch_number(default_config)
+        external_service = ExternalAPIService(db)
+        response = await external_service.fetch_number()
         
         return Response(
             content=response.content,
@@ -127,8 +127,8 @@ async def fetch_number_with_range(
             config["headers"]["referer"] = f"https://itbd.online/user_report_1?getfrange={number_range}"
         
         # Make external API call
-        external_service = ExternalAPIService()
-        response = await external_service.fetch_number(config)
+        external_service = ExternalAPIService(db)
+        response = await external_service.fetch_number(number_range)
         
         return Response(
             content=response.content,
